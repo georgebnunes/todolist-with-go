@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -20,16 +21,24 @@ func New(repo *repository.TodoRepository) *Handler {
 	}
 }
 
-func (h *Handler) Route(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	switch {
-	case req.HTTPMethod == http.MethodPost && req.Resource == "/todos":
+func (h *Handler) Route(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+
+	method := req.RequestContext.HTTP.Method // ← fix principal
+	path := req.RequestContext.HTTP.Path     // ← fix principal
+	id := req.PathParameters["id"]
+
+	log.Printf("method=%s path=%s id=%s", method, path, id)
+
+	switch method {
+	case http.MethodPost:
 		return h.CreateTodo(ctx, req)
+
 	default:
 		return response(http.StatusNotFound, map[string]string{"error": "route not found"})
 	}
 }
 
-func (h *Handler) CreateTodo(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func (h *Handler) CreateTodo(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
 	var body = model.CreateTodoRequest{}
 
@@ -51,18 +60,18 @@ func (h *Handler) CreateTodo(ctx context.Context, req events.APIGatewayProxyRequ
 	return response(http.StatusCreated, todo)
 }
 
-func response(statusCode int, body any) (events.APIGatewayProxyResponse, error) {
+func response(statusCode int, body any) (events.APIGatewayV2HTTPResponse, error) {
 	var bodyStr string
 
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return events.APIGatewayProxyResponse{StatusCode: 500}, err
+			return events.APIGatewayV2HTTPResponse{StatusCode: 500}, err
 		}
 		bodyStr = string(b)
 	}
 
-	return events.APIGatewayProxyResponse{
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: statusCode,
 		Headers:    map[string]string{"Content-Type": "application/json"},
 		Body:       bodyStr,
