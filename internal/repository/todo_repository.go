@@ -52,3 +52,29 @@ func (r *TodoRepository) Create(ctx context.Context, title string) (*model.TodoI
 
 	return todo, nil
 }
+
+
+func (r *TodoRepository) ListTodos(ctx context.Context) ([]model.TodoItem, error){
+	output, err := r.client.Scan(ctx, &dynamodb.ScanInput{
+		TableName: aws.String(r.tableName)
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("scanning table: %w", err)
+	}
+
+	var items []model.TodoItem
+
+	for _, it range output.Items {
+		var item model.TodoItem
+		err := attributevalue.UnmarshalMap(it, &item)
+
+		if err != nil {
+			return nil, fmt.Errorf("unmarshaling item: %w", err)
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}
