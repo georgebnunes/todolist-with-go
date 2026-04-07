@@ -32,7 +32,8 @@ func (h *Handler) Route(ctx context.Context, req events.APIGatewayV2HTTPRequest)
 	switch method {
 	case http.MethodPost:
 		return h.CreateTodo(ctx, req)
-
+	case http.MethodGet:
+		return h.ListTodos(ctx)
 	default:
 		return response(http.StatusNotFound, map[string]string{"error": "route not found"})
 	}
@@ -58,6 +59,17 @@ func (h *Handler) CreateTodo(ctx context.Context, req events.APIGatewayV2HTTPReq
 
 	// Implementation for creating a todo
 	return response(http.StatusCreated, todo)
+}
+
+func (h *Handler) ListTodos(ctx context.Context) (events.APIGatewayV2HTTPResponse, error) {
+
+	todos, err := h.repo.ListTodos(ctx)
+	if err != nil {
+		return response(http.StatusInternalServerError, err)
+	}
+
+	return response(200, todos)
+
 }
 
 func response(statusCode int, body any) (events.APIGatewayV2HTTPResponse, error) {
